@@ -8,53 +8,23 @@
 body{
     margin:0;
     font-family:Segoe UI, sans-serif;
-    background:linear-gradient(135deg,#0f0f0f,#1a001f);
+    background:#111;
     color:#f5d742;
 }
-h1{
-    text-align:center;
-    text-shadow:0 0 15px #f5d742;
-}
-.center{
-    display:flex;
-    justify-content:center;
-    align-items:center;
-    height:90vh;
-    flex-direction:column;
-}
-input{
-    padding:10px;
-    margin:5px;
-    border-radius:8px;
-    border:none;
-    width:200px;
-}
-button{
-    padding:10px 15px;
-    margin:5px;
-    border:none;
-    border-radius:8px;
-    background:#f5d742;
-    font-weight:bold;
-    cursor:pointer;
-}
 .hidden{ display:none; }
-
 .main{
     display:grid;
     grid-template-columns:2fr 1fr;
-    height:70vh;
 }
 .products{
     padding:20px;
     display:grid;
-    grid-template-columns:repeat(auto-fill,minmax(130px,1fr));
+    grid-template-columns:repeat(auto-fill,minmax(120px,1fr));
     gap:10px;
 }
 .product{
-    background:#111;
+    background:#222;
     border:2px solid #f5d742;
-    border-radius:12px;
     padding:15px;
     text-align:center;
     cursor:pointer;
@@ -62,15 +32,19 @@ button{
 .ticket{
     border-left:2px solid #f5d742;
     padding:20px;
-    background:#0a0a0a;
 }
-.sale-item{
-    border-bottom:1px solid #444;
-    padding:5px 0;
+button{
+    margin:5px;
+    padding:8px 12px;
+    border:none;
+    background:#f5d742;
+    font-weight:bold;
+    cursor:pointer;
 }
 .admin-panel{
-    background:#1a001f;
     padding:20px;
+    border-top:2px solid #f5d742;
+    background:#1a001f;
 }
 </style>
 </head>
@@ -78,19 +52,20 @@ button{
 <body>
 
 <!-- LOGIN -->
-<div id="loginScreen" class="center">
-    <h1>YELLOWPUNK TERMINAL</h1>
-    <input id="username" placeholder="Usuario">
-    <input id="password" type="password" placeholder="Contraseña">
-    <button onclick="login()">Entrar</button>
+<div id="loginScreen">
+<h2>Login Bartender</h2>
+<input id="username" placeholder="Usuario"><br>
+<input id="password" type="password" placeholder="Contraseña"><br>
+<button onclick="login()">Entrar</button>
 </div>
 
 <!-- POS -->
 <div id="posScreen" class="hidden">
-<h1 id="welcome"></h1>
+
+<h2 id="welcome"></h2>
 
 <div class="main">
-<div class="products" id="products"></div>
+<div id="products" class="products"></div>
 
 <div class="ticket">
 <h3>Ticket</h3>
@@ -98,77 +73,96 @@ button{
 <h3>Total: $<span id="total">0</span></h3>
 <button onclick="resetCart()">Reset</button>
 <button onclick="cobrar()">Cobrar</button>
-<button onclick="logout()">Cerrar Sesión</button>
-<button id="adminBtn" onclick="toggleAdmin()" class="hidden">Admin</button>
+<button onclick="toggleHistorial()">Historial</button>
+<button onclick="promptAdminPass()">Admin</button>
+<button onclick="logout()">Cerrar sesión</button>
 </div>
 </div>
 
+<!-- HISTORIAL -->
+<div id="historialPanel" class="hidden" style="padding:20px;border-top:2px solid #f5d742;">
+<h3>Historial</h3>
+<div id="historialContent"></div>
+</div>
+
+<!-- ADMIN PANEL -->
 <div id="adminPanel" class="admin-panel hidden">
 
-<h2>Panel Admin</h2>
+<h3>Panel Admin</h3>
 
-<h3>Crear Bartender</h3>
+<h4>Crear Bartender</h4>
 <input id="newUser" placeholder="Usuario">
 <input id="newPass" placeholder="Contraseña">
 <button onclick="createBartender()">Crear</button>
 
-<h3>Lista de Bartenders</h3>
+<h4>Lista de Bartenders</h4>
 <div id="bartenderList"></div>
 
-<h3>Cambiar Contraseña Admin</h3>
-<input id="newAdminPass" type="password" placeholder="Nueva contraseña">
-<input id="confirmAdminPass" type="password" placeholder="Confirmar contraseña">
-<button onclick="changeAdminPass()">Actualizar</button>
-
-<h3>Ventas</h3>
-<div id="salesHistory"></div>
-
-<h3>Total General: $<span id="dailyTotal">0</span></h3>
-<button onclick="clearHistory()">Borrar Historial</button>
-
-</div>
 </div>
 
 <script>
+// 🔑 USUARIOS (bartenders)
+let users = JSON.parse(localStorage.getItem("users")) || [];
+if(!Array.isArray(users)) users = [];
 
-let users = JSON.parse(localStorage.getItem("users")) || [
-    {username:"admin", password:"2077", role:"admin"}
-];
+let currentUser = null;
 
+// CONTRASEÑA GENERAL DEL PANEL ADMIN
+const ADMIN_PASSWORD = "yellowpunk2077";
+
+// PRODUCTOS
 let products = [
     {name:"Cerveza", price:5},
     {name:"Ron", price:8},
     {name:"Whisky", price:10}
 ];
 
-let sales = JSON.parse(localStorage.getItem("sales")) || [];
-let currentUser = null;
 let cart = [];
 let total = 0;
+
+// VENTAS
+let sales;
+try {
+    sales = JSON.parse(localStorage.getItem("sales")) || [];
+    if(!Array.isArray(sales)) sales = [];
+} catch {
+    sales = [];
+}
+
+// FUNCION: CREAR PRIMER BARTENDER AUTOMATICO
+if(users.length===0){
+    const u = prompt("No hay bartenders. Crea el primer usuario:");
+    const p = prompt("Contraseña del primer bartender:");
+    if(u && p){
+        users.push({username:u.trim(), password:p.trim(), role:"bartender"});
+        localStorage.setItem("users", JSON.stringify(users));
+        alert("Primer bartender creado: "+u);
+    } else {
+        alert("Debes crear un bartender para continuar.");
+        location.reload();
+    }
+}
+
+// FUNCIONES
 
 function saveUsers(){
     localStorage.setItem("users", JSON.stringify(users));
 }
 
+// LOGIN
 function login(){
-    let u = username.value;
-    let p = password.value;
+    const u = username.value.trim();
+    const p = password.value.trim();
 
-    let found = users.find(x=>x.username===u && x.password===p);
-
+    const found = users.find(user=>user.username===u && user.password===p);
     if(found){
         currentUser = found;
         loginScreen.classList.add("hidden");
         posScreen.classList.remove("hidden");
         welcome.innerText = "Conectado: " + currentUser.username;
-
-        if(currentUser.role==="admin"){
-            adminBtn.classList.remove("hidden");
-        }
-
         renderProducts();
     } else {
-        alert("Credenciales incorrectas");
+        alert("Usuario o contraseña incorrectos");
     }
 }
 
@@ -176,13 +170,14 @@ function logout(){
     location.reload();
 }
 
+// PRODUCTOS
 function renderProducts(){
-    let container = document.getElementById("products");
+    const container = document.getElementById("products");
     container.innerHTML="";
     products.forEach(p=>{
-        let div = document.createElement("div");
+        const div=document.createElement("div");
         div.className="product";
-        div.innerHTML=p.name+"<br>$"+p.price;
+        div.innerText=p.name+" $"+p.price;
         div.onclick=()=>addToCart(p);
         container.appendChild(div);
     });
@@ -195,10 +190,9 @@ function addToCart(p){
 }
 
 function renderTicket(){
-    let t=document.getElementById("ticketItems");
-    t.innerHTML="";
-    cart.forEach(i=>{
-        t.innerHTML+="<div class='sale-item'>"+i.name+" - $"+i.price+"</div>";
+    ticketItems.innerHTML="";
+    cart.forEach(item=>{
+        ticketItems.innerHTML+=item.name+" - $"+item.price+"<br>";
     });
     document.getElementById("total").innerText=total;
 }
@@ -209,114 +203,89 @@ function resetCart(){
     renderTicket();
 }
 
+// COBRAR
 function cobrar(){
-    if(cart.length===0)return;
+    if(cart.length===0) return;
 
-    sales.push({
+    const sale={
+        ticket:sales.length+1,
         date:new Date().toLocaleString(),
         bartender:currentUser.username,
+        items:[...cart],
         total:total
-    });
+    };
 
+    sales.push(sale);
     localStorage.setItem("sales", JSON.stringify(sales));
-    alert("Venta registrada");
+
     resetCart();
+    alert("Venta guardada");
 }
 
-function toggleAdmin(){
-    adminPanel.classList.toggle("hidden");
-    renderSales();
-    renderBartenders();
+// HISTORIAL
+function toggleHistorial(){
+    historialPanel.classList.toggle("hidden");
+    renderHistorial();
 }
 
-function renderSales(){
-    let history=document.getElementById("salesHistory");
-    history.innerHTML="";
-    let daily=0;
-
-    sales.forEach(s=>{
-        daily+=s.total;
-        history.innerHTML+=`
-        <div class="sale-item">
-        ${s.date} - ${s.bartender} - $${s.total}
-        </div>`;
+function renderHistorial(){
+    historialContent.innerHTML="";
+    if(sales.length===0){
+        historialContent.innerText="Sin ventas";
+        return;
+    }
+    sales.slice().reverse().forEach(sale=>{
+        let html="<div style='border:1px solid #f5d742;padding:10px;margin-bottom:10px'>";
+        html+="<strong>Ticket #"+sale.ticket+"</strong><br>";
+        html+=sale.date+"<br>";
+        html+="Bartender: "+sale.bartender+"<br><br>";
+        sale.items.forEach(item=>{
+            html+=item.name+" $"+item.price+"<br>";
+        });
+        html+="<hr>Total: $"+sale.total+"</div>";
+        historialContent.innerHTML+=html;
     });
-
-    document.getElementById("dailyTotal").innerText=daily;
 }
 
-function createBartender(){
-    let u=newUser.value;
-    let p=newPass.value;
+// PANEL ADMIN POR CONTRASEÑA
+function promptAdminPass(){
+    const pass = prompt("Ingresa la contraseña del panel admin:");
+    if(pass === ADMIN_PASSWORD){
+        adminPanel.classList.remove("hidden");
+        renderBartenders();
+    } else {
+        alert("Contraseña incorrecta");
+    }
+}
 
-    if(!u||!p)return alert("Completa los campos");
+// ADMIN
+function createBartender(){
+    const u=newUser.value.trim();
+    const p=newPass.value.trim();
+    if(!u||!p) return alert("Completa los campos");
+    if(users.find(user=>user.username===u)) return alert("Usuario ya existe");
 
     users.push({username:u,password:p,role:"bartender"});
     saveUsers();
     renderBartenders();
-
-    alert("Bartender creado");
     newUser.value="";
     newPass.value="";
 }
 
 function renderBartenders(){
-    let list=document.getElementById("bartenderList");
-    list.innerHTML="";
-
+    bartenderList.innerHTML="";
     users.forEach(user=>{
-        if(user.role==="bartender"){
-            list.innerHTML+=`
-            <div class="sale-item">
-                ${user.username}
-                <button onclick="deleteBartender('${user.username}')">
-                Eliminar
-                </button>
-            </div>`;
-        }
+        bartenderList.innerHTML+=`
+        ${user.username}
+        <button onclick="deleteBartender('${user.username}')">X</button>
+        <br>`;
     });
 }
 
 function deleteBartender(username){
-    if(confirm("¿Eliminar a "+username+"?")){
-        users=users.filter(user=>user.username!==username);
-        saveUsers();
-        renderBartenders();
-        alert("Bartender eliminado");
-    }
-}
-
-function changeAdminPass(){
-    let newPass=document.getElementById("newAdminPass").value;
-    let confirmPass=document.getElementById("confirmAdminPass").value;
-
-    if(!newPass||!confirmPass){
-        alert("Completa los campos");
-        return;
-    }
-
-    if(newPass!==confirmPass){
-        alert("Las contraseñas no coinciden");
-        return;
-    }
-
-    let adminUser=users.find(u=>u.role==="admin");
-    adminUser.password=newPass;
-
+    users=users.filter(user=>user.username!==username);
     saveUsers();
-
-    alert("Contraseña actualizada");
-
-    document.getElementById("newAdminPass").value="";
-    document.getElementById("confirmAdminPass").value="";
-}
-
-function clearHistory(){
-    if(confirm("¿Seguro?")){
-        sales=[];
-        localStorage.removeItem("sales");
-        renderSales();
-    }
+    renderBartenders();
 }
 
 </script>
