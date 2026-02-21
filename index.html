@@ -131,12 +131,8 @@ button{
 
 <script>
 
-let users = JSON.parse(localStorage.getItem("users")) || [];
-
-if(!users.some(u => u.role === "admin")){
-    users.push({username:"admin", password:"2077", role:"admin"});
-    localStorage.setItem("users", JSON.stringify(users));
-}
+let users = JSON.parse(localStorage.getItem("users")) || [
+    {username:"admin", password:"2077", role:"admin"}
 ];
 
 let products = [
