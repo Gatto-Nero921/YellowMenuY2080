@@ -2,206 +2,326 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>YellowPunk POS</title>
+<title>YellowPunk Terminal</title>
+
 <style>
-
-body {
-    margin: 0;
-    font-family: 'Segoe UI', sans-serif;
-    background: linear-gradient(135deg, #0f0f0f, #1a001f);
-    color: #f5d742;
+body{
+    margin:0;
+    font-family:Segoe UI, sans-serif;
+    background:linear-gradient(135deg,#0f0f0f,#1a001f);
+    color:#f5d742;
 }
-
-h1 {
-    text-align: center;
-    font-size: 40px;
-    text-shadow: 0 0 15px #f5d742;
-    margin-top: 20px;
+h1{
+    text-align:center;
+    text-shadow:0 0 15px #f5d742;
 }
-
-.container {
-    max-width: 900px;
-    margin: auto;
-    padding: 20px;
+.center{
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    height:90vh;
+    flex-direction:column;
 }
-
-.product-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-    gap: 15px;
+input{
+    padding:10px;
+    margin:5px;
+    border-radius:8px;
+    border:none;
+    width:200px;
 }
-
-.product {
-    background: #111;
-    border: 2px solid #f5d742;
-    border-radius: 12px;
-    padding: 15px;
-    text-align: center;
-    cursor: pointer;
-    transition: 0.3s;
+button{
+    padding:10px 15px;
+    margin:5px;
+    border:none;
+    border-radius:8px;
+    background:#f5d742;
+    font-weight:bold;
+    cursor:pointer;
 }
+.hidden{ display:none; }
 
-.product:hover {
-    background: #f5d742;
-    color: #000;
-    box-shadow: 0 0 20px #f5d742;
+.main{
+    display:grid;
+    grid-template-columns:2fr 1fr;
+    height:70vh;
 }
-
-.total {
-    font-size: 28px;
-    margin-top: 20px;
-    text-align: center;
+.products{
+    padding:20px;
+    display:grid;
+    grid-template-columns:repeat(auto-fill,minmax(130px,1fr));
+    gap:10px;
 }
-
-button {
-    background: #f5d742;
-    border: none;
-    padding: 10px 15px;
-    margin: 5px;
-    border-radius: 8px;
-    cursor: pointer;
-    font-weight: bold;
+.product{
+    background:#111;
+    border:2px solid #f5d742;
+    border-radius:12px;
+    padding:15px;
+    text-align:center;
+    cursor:pointer;
 }
-
-.admin-panel {
-    display: none;
-    background: #1a001f;
-    padding: 15px;
-    margin-top: 20px;
-    border-radius: 10px;
+.ticket{
+    border-left:2px solid #f5d742;
+    padding:20px;
+    background:#0a0a0a;
 }
-
-input {
-    padding: 8px;
-    margin: 5px;
-    border-radius: 6px;
-    border: none;
+.sale-item{
+    border-bottom:1px solid #444;
+    padding:5px 0;
 }
-
+.admin-panel{
+    background:#1a001f;
+    padding:20px;
+}
 </style>
 </head>
+
 <body>
 
-<h1>YELLOWPUNK</h1>
-
-<div class="container">
-
-<div class="product-grid" id="products"></div>
-
-<div class="total">
-Total: $<span id="total">0</span>
+<!-- LOGIN -->
+<div id="loginScreen" class="center">
+    <h1>YELLOWPUNK TERMINAL</h1>
+    <input id="username" placeholder="Usuario">
+    <input id="password" type="password" placeholder="Contraseña">
+    <button onclick="login()">Entrar</button>
 </div>
 
-<center>
-<button onclick="resetTotal()">Reset</button>
+<!-- POS -->
+<div id="posScreen" class="hidden">
+<h1 id="welcome"></h1>
+
+<div class="main">
+<div class="products" id="products"></div>
+
+<div class="ticket">
+<h3>Ticket</h3>
+<div id="ticketItems"></div>
+<h3>Total: $<span id="total">0</span></h3>
+<button onclick="resetCart()">Reset</button>
 <button onclick="cobrar()">Cobrar</button>
-<button onclick="adminLogin()">Admin</button>
-</center>
-
-<div class="admin-panel" id="adminPanel">
-<h3>Panel Admin</h3>
-
-<input type="text" id="newName" placeholder="Nombre producto">
-<input type="number" id="newPrice" placeholder="Precio">
-<button onclick="addProduct()">Añadir</button>
-
-<div id="productList"></div>
-
+<button onclick="logout()">Cerrar Sesión</button>
+<button id="adminBtn" onclick="toggleAdmin()" class="hidden">Admin</button>
+</div>
 </div>
 
+<div id="adminPanel" class="admin-panel hidden">
+
+<h2>Panel Admin</h2>
+
+<h3>Crear Bartender</h3>
+<input id="newUser" placeholder="Usuario">
+<input id="newPass" placeholder="Contraseña">
+<button onclick="createBartender()">Crear</button>
+
+<h3>Lista de Bartenders</h3>
+<div id="bartenderList"></div>
+
+<h3>Cambiar Contraseña Admin</h3>
+<input id="newAdminPass" type="password" placeholder="Nueva contraseña">
+<input id="confirmAdminPass" type="password" placeholder="Confirmar contraseña">
+<button onclick="changeAdminPass()">Actualizar</button>
+
+<h3>Ventas</h3>
+<div id="salesHistory"></div>
+
+<h3>Total General: $<span id="dailyTotal">0</span></h3>
+<button onclick="clearHistory()">Borrar Historial</button>
+
+</div>
 </div>
 
 <script>
 
-let total = 0;
-let cart = [];
+let users = JSON.parse(localStorage.getItem("users")) || [];
 
-let products = JSON.parse(localStorage.getItem("products")) || [
+if(!users.some(u => u.role === "admin")){
+    users.push({username:"admin", password:"2077", role:"admin"});
+    localStorage.setItem("users", JSON.stringify(users));
+}
+];
+
+let products = [
     {name:"Cerveza", price:5},
     {name:"Ron", price:8},
     {name:"Whisky", price:10}
 ];
 
+let sales = JSON.parse(localStorage.getItem("sales")) || [];
+let currentUser = null;
+let cart = [];
+let total = 0;
+
+function saveUsers(){
+    localStorage.setItem("users", JSON.stringify(users));
+}
+
+function login(){
+    let u = username.value;
+    let p = password.value;
+
+    let found = users.find(x=>x.username===u && x.password===p);
+
+    if(found){
+        currentUser = found;
+        loginScreen.classList.add("hidden");
+        posScreen.classList.remove("hidden");
+        welcome.innerText = "Conectado: " + currentUser.username;
+
+        if(currentUser.role==="admin"){
+            adminBtn.classList.remove("hidden");
+        }
+
+        renderProducts();
+    } else {
+        alert("Credenciales incorrectas");
+    }
+}
+
+function logout(){
+    location.reload();
+}
+
 function renderProducts(){
     let container = document.getElementById("products");
-    container.innerHTML = "";
-    products.forEach((p, index)=>{
+    container.innerHTML="";
+    products.forEach(p=>{
         let div = document.createElement("div");
-        div.className = "product";
-        div.innerHTML = `<strong>${p.name}</strong><br>$${p.price}`;
-        div.onclick = ()=> addToCart(p);
+        div.className="product";
+        div.innerHTML=p.name+"<br>$"+p.price;
+        div.onclick=()=>addToCart(p);
         container.appendChild(div);
     });
-    renderAdminList();
 }
 
-function addToCart(product){
-    cart.push(product);
-    total += product.price;
-    document.getElementById("total").innerText = total;
+function addToCart(p){
+    cart.push(p);
+    total+=p.price;
+    renderTicket();
 }
 
-function resetTotal(){
-    total = 0;
-    cart = [];
-    document.getElementById("total").innerText = total;
+function renderTicket(){
+    let t=document.getElementById("ticketItems");
+    t.innerHTML="";
+    cart.forEach(i=>{
+        t.innerHTML+="<div class='sale-item'>"+i.name+" - $"+i.price+"</div>";
+    });
+    document.getElementById("total").innerText=total;
+}
+
+function resetCart(){
+    cart=[];
+    total=0;
+    renderTicket();
 }
 
 function cobrar(){
-    if(cart.length === 0){
-        alert("No hay productos en el ticket");
+    if(cart.length===0)return;
+
+    sales.push({
+        date:new Date().toLocaleString(),
+        bartender:currentUser.username,
+        total:total
+    });
+
+    localStorage.setItem("sales", JSON.stringify(sales));
+    alert("Venta registrada");
+    resetCart();
+}
+
+function toggleAdmin(){
+    adminPanel.classList.toggle("hidden");
+    renderSales();
+    renderBartenders();
+}
+
+function renderSales(){
+    let history=document.getElementById("salesHistory");
+    history.innerHTML="";
+    let daily=0;
+
+    sales.forEach(s=>{
+        daily+=s.total;
+        history.innerHTML+=`
+        <div class="sale-item">
+        ${s.date} - ${s.bartender} - $${s.total}
+        </div>`;
+    });
+
+    document.getElementById("dailyTotal").innerText=daily;
+}
+
+function createBartender(){
+    let u=newUser.value;
+    let p=newPass.value;
+
+    if(!u||!p)return alert("Completa los campos");
+
+    users.push({username:u,password:p,role:"bartender"});
+    saveUsers();
+    renderBartenders();
+
+    alert("Bartender creado");
+    newUser.value="";
+    newPass.value="";
+}
+
+function renderBartenders(){
+    let list=document.getElementById("bartenderList");
+    list.innerHTML="";
+
+    users.forEach(user=>{
+        if(user.role==="bartender"){
+            list.innerHTML+=`
+            <div class="sale-item">
+                ${user.username}
+                <button onclick="deleteBartender('${user.username}')">
+                Eliminar
+                </button>
+            </div>`;
+        }
+    });
+}
+
+function deleteBartender(username){
+    if(confirm("¿Eliminar a "+username+"?")){
+        users=users.filter(user=>user.username!==username);
+        saveUsers();
+        renderBartenders();
+        alert("Bartender eliminado");
+    }
+}
+
+function changeAdminPass(){
+    let newPass=document.getElementById("newAdminPass").value;
+    let confirmPass=document.getElementById("confirmAdminPass").value;
+
+    if(!newPass||!confirmPass){
+        alert("Completa los campos");
         return;
     }
 
-    let ticket = "===== YELLOWPUNK =====\n";
-    ticket += new Date().toLocaleString() + "\n\n";
+    if(newPass!==confirmPass){
+        alert("Las contraseñas no coinciden");
+        return;
+    }
 
-    cart.forEach(p=>{
-        ticket += p.name + " - $" + p.price + "\n";
-    });
+    let adminUser=users.find(u=>u.role==="admin");
+    adminUser.password=newPass;
 
-    ticket += "\nTOTAL: $" + total;
-    ticket += "\n\nGracias por sobrevivir al desierto.";
+    saveUsers();
 
-    alert(ticket);
+    alert("Contraseña actualizada");
 
-    resetTotal();
+    document.getElementById("newAdminPass").value="";
+    document.getElementById("confirmAdminPass").value="";
 }
 
-function adminLogin(){
-    let pass = prompt("Contraseña Admin:");
-    if(pass === "2077"){
-        document.getElementById("adminPanel").style.display = "block";
-    } else {
-        alert("Acceso denegado");
+function clearHistory(){
+    if(confirm("¿Seguro?")){
+        sales=[];
+        localStorage.removeItem("sales");
+        renderSales();
     }
 }
-
-function addProduct(){
-    let name = document.getElementById("newName").value;
-    let price = parseFloat(document.getElementById("newPrice").value);
-    if(name && price){
-        products.push({name, price});
-        localStorage.setItem("products", JSON.stringify(products));
-        renderProducts();
-    }
-}
-
-function deleteProduct(index){
-    products.splice(index,1);
-    localStorage.setItem("products", JSON.stringify(products));
-    renderProducts();
-}
-
-function renderAdminList(){
-    let list = document.getElementById("productList");
-    list.innerHTML = "<h4>Productos:</h4>";
-    products.forEach((p,i)=>{
-        list.innerHTML += `${p.name} - $${p.price} <button onclick="deleteProduct(${i})">X</button><br>`;
-    });
-}
-
-renderProducts();
 
 </script>
 
