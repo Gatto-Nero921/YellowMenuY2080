@@ -1,126 +1,183 @@
 <!DOCTYPE html>
-<html lang="es">
+<html>
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>YellowPunk | Sistema de Cobro</title>
-
+<title>YellowPunk POS</title>
 <style>
+
 body {
     margin: 0;
-    font-family: 'Arial', sans-serif;
-    background: linear-gradient(135deg, #0f0f0f, #1a1a1a);
+    font-family: 'Segoe UI', sans-serif;
+    background: linear-gradient(135deg, #0f0f0f, #1a001f);
     color: #f5d742;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    min-height: 100vh;
-}
-
-.container {
-    background: #111;
-    padding: 25px;
-    border-radius: 15px;
-    box-shadow: 0 0 20px #f5d742;
-    width: 95%;
-    max-width: 500px;
 }
 
 h1 {
     text-align: center;
-    margin-bottom: 20px;
+    font-size: 40px;
+    text-shadow: 0 0 15px #f5d742;
+    margin-top: 20px;
 }
 
-select, input, button {
-    width: 100%;
-    padding: 10px;
-    margin-top: 10px;
-    border-radius: 8px;
-    border: none;
-    font-size: 16px;
+.container {
+    max-width: 900px;
+    margin: auto;
+    padding: 20px;
 }
 
-button {
-    background-color: #f5d742;
-    font-weight: bold;
+.product-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 15px;
+}
+
+.product {
+    background: #111;
+    border: 2px solid #f5d742;
+    border-radius: 12px;
+    padding: 15px;
+    text-align: center;
     cursor: pointer;
+    transition: 0.3s;
 }
 
-button:hover {
-    background-color: #ffd900;
-}
-
-.item {
-    display: flex;
-    justify-content: space-between;
-    margin-top: 10px;
-    background: #1c1c1c;
-    padding: 8px;
-    border-radius: 6px;
+.product:hover {
+    background: #f5d742;
+    color: #000;
+    box-shadow: 0 0 20px #f5d742;
 }
 
 .total {
+    font-size: 28px;
     margin-top: 20px;
-    font-size: 20px;
-    text-align: right;
+    text-align: center;
 }
+
+button {
+    background: #f5d742;
+    border: none;
+    padding: 10px 15px;
+    margin: 5px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+.admin-panel {
+    display: none;
+    background: #1a001f;
+    padding: 15px;
+    margin-top: 20px;
+    border-radius: 10px;
+}
+
+input {
+    padding: 8px;
+    margin: 5px;
+    border-radius: 6px;
+    border: none;
+}
+
 </style>
 </head>
-
 <body>
 
+<h1>YELLOWPUNK</h1>
+
 <div class="container">
-    <h1>YELLOWPUNK</h1>
 
-    <select id="producto">
-        <option value="5">Cerveza - $5</option>
-        <option value="8">Trago Especial - $8</option>
-        <option value="3">Refresco - $3</option>
-        <option value="12">Botella Premium - $12</option>
-    </select>
+<div class="product-grid" id="products"></div>
 
-    <input type="number" id="cantidad" value="1" min="1">
+<div class="total">
+Total: $<span id="total">0</span>
+</div>
 
-    <button onclick="agregarProducto()">Agregar al Pedido</button>
-    <button onclick="reiniciar()">Reiniciar Pedido</button>
+<center>
+<button onclick="resetTotal()">Reset</button>
+<button onclick="adminLogin()">Admin</button>
+</center>
 
-    <div id="lista"></div>
+<div class="admin-panel" id="adminPanel">
+<h3>Panel Admin</h3>
 
-    <div class="total">
-        Total: $<span id="total">0</span>
-    </div>
+<input type="text" id="newName" placeholder="Nombre producto">
+<input type="number" id="newPrice" placeholder="Precio">
+<button onclick="addProduct()">Añadir</button>
+
+<div id="productList"></div>
+
+</div>
+
 </div>
 
 <script>
+
 let total = 0;
 
-function agregarProducto() {
-    const select = document.getElementById("producto");
-    const precio = parseFloat(select.value);
-    const nombre = select.options[select.selectedIndex].text;
-    const cantidad = parseInt(document.getElementById("cantidad").value);
+let products = JSON.parse(localStorage.getItem("products")) || [
+    {name:"Cerveza", price:5},
+    {name:"Ron", price:8},
+    {name:"Whisky", price:10}
+];
 
-    const subtotal = precio * cantidad;
-    total += subtotal;
-
-    const lista = document.getElementById("lista");
-
-    const item = document.createElement("div");
-    item.classList.add("item");
-    item.innerHTML = `
-        <span>${cantidad} x ${nombre}</span>
-        <span>$${subtotal}</span>
-    `;
-
-    lista.appendChild(item);
-    document.getElementById("total").innerText = total.toFixed(2);
+function renderProducts(){
+    let container = document.getElementById("products");
+    container.innerHTML = "";
+    products.forEach((p, index)=>{
+        let div = document.createElement("div");
+        div.className = "product";
+        div.innerHTML = `<strong>${p.name}</strong><br>$${p.price}`;
+        div.onclick = ()=> addToTotal(p.price);
+        container.appendChild(div);
+    });
+    renderAdminList();
 }
 
-function reiniciar() {
+function addToTotal(price){
+    total += price;
+    document.getElementById("total").innerText = total;
+}
+
+function resetTotal(){
     total = 0;
-    document.getElementById("lista").innerHTML = "";
-    document.getElementById("total").innerText = "0";
+    document.getElementById("total").innerText = total;
 }
+
+function adminLogin(){
+    let pass = prompt("Contraseña Admin:");
+    if(pass === "2077"){
+        document.getElementById("adminPanel").style.display = "block";
+    } else {
+        alert("Acceso denegado");
+    }
+}
+
+function addProduct(){
+    let name = document.getElementById("newName").value;
+    let price = parseFloat(document.getElementById("newPrice").value);
+    if(name && price){
+        products.push({name, price});
+        localStorage.setItem("products", JSON.stringify(products));
+        renderProducts();
+    }
+}
+
+function deleteProduct(index){
+    products.splice(index,1);
+    localStorage.setItem("products", JSON.stringify(products));
+    renderProducts();
+}
+
+function renderAdminList(){
+    let list = document.getElementById("productList");
+    list.innerHTML = "<h4>Productos:</h4>";
+    products.forEach((p,i)=>{
+        list.innerHTML += `${p.name} - $${p.price} <button onclick="deleteProduct(${i})">X</button><br>`;
+    });
+}
+
+renderProducts();
+
 </script>
 
 </body>
