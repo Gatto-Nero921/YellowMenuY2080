@@ -94,6 +94,7 @@ Total: $<span id="total">0</span>
 
 <center>
 <button onclick="resetTotal()">Reset</button>
+<button onclick="cobrar()">Cobrar</button>
 <button onclick="adminLogin()">Admin</button>
 </center>
 
@@ -113,6 +114,7 @@ Total: $<span id="total">0</span>
 <script>
 
 let total = 0;
+let cart = [];
 
 let products = JSON.parse(localStorage.getItem("products")) || [
     {name:"Cerveza", price:5},
@@ -127,20 +129,43 @@ function renderProducts(){
         let div = document.createElement("div");
         div.className = "product";
         div.innerHTML = `<strong>${p.name}</strong><br>$${p.price}`;
-        div.onclick = ()=> addToTotal(p.price);
+        div.onclick = ()=> addToCart(p);
         container.appendChild(div);
     });
     renderAdminList();
 }
 
-function addToTotal(price){
-    total += price;
+function addToCart(product){
+    cart.push(product);
+    total += product.price;
     document.getElementById("total").innerText = total;
 }
 
 function resetTotal(){
     total = 0;
+    cart = [];
     document.getElementById("total").innerText = total;
+}
+
+function cobrar(){
+    if(cart.length === 0){
+        alert("No hay productos en el ticket");
+        return;
+    }
+
+    let ticket = "===== YELLOWPUNK =====\n";
+    ticket += new Date().toLocaleString() + "\n\n";
+
+    cart.forEach(p=>{
+        ticket += p.name + " - $" + p.price + "\n";
+    });
+
+    ticket += "\nTOTAL: $" + total;
+    ticket += "\n\nGracias por sobrevivir al desierto.";
+
+    alert(ticket);
+
+    resetTotal();
 }
 
 function adminLogin(){
