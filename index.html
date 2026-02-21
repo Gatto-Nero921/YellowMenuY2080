@@ -28,6 +28,10 @@ body{
     padding:15px;
     text-align:center;
     cursor:pointer;
+    transition: 0.3s all;
+}
+.product:hover{
+    box-shadow: 0 0 10px #f5d742;
 }
 .ticket{
     border-left:2px solid #f5d742;
@@ -40,6 +44,10 @@ button{
     background:#f5d742;
     font-weight:bold;
     cursor:pointer;
+    transition: 0.3s all;
+}
+button:hover{
+    box-shadow: 0 0 10px #f5d742;
 }
 .admin-panel{
     padding:20px;
@@ -98,6 +106,12 @@ button{
 <h4>Lista de Bartenders</h4>
 <div id="bartenderList"></div>
 
+<h4>Gestionar Productos</h4>
+<input id="productName" placeholder="Nombre del producto">
+<input id="productPrice" type="number" placeholder="Precio">
+<button onclick="addProduct()">Agregar / Actualizar</button>
+<div id="productList"></div>
+
 </div>
 
 <script>
@@ -117,6 +131,14 @@ let products = [
     {name:"Whisky", price:10}
 ];
 
+// Cargar productos desde localStorage
+let storedProducts = JSON.parse(localStorage.getItem("products"));
+if(Array.isArray(storedProducts) && storedProducts.length>0){
+    products = storedProducts;
+} else {
+    localStorage.setItem("products", JSON.stringify(products));
+}
+
 let cart = [];
 let total = 0;
 
@@ -129,7 +151,7 @@ try {
     sales = [];
 }
 
-// FUNCION: CREAR PRIMER BARTENDER AUTOMATICO
+// 🔹 Primer bartender automático
 if(users.length===0){
     const u = prompt("No hay bartenders. Crea el primer usuario:");
     const p = prompt("Contraseña del primer bartender:");
@@ -144,9 +166,13 @@ if(users.length===0){
 }
 
 // FUNCIONES
-
 function saveUsers(){
     localStorage.setItem("users", JSON.stringify(users));
+}
+function saveProducts(){
+    localStorage.setItem("products", JSON.stringify(products));
+    renderProducts();
+    renderProductList();
 }
 
 // LOGIN
@@ -218,6 +244,8 @@ function cobrar(){
     sales.push(sale);
     localStorage.setItem("sales", JSON.stringify(sales));
 
+    sendToSheets(sale); // ✅ Enviar a Google Sheets
+
     resetCart();
     alert("Venta guardada");
 }
@@ -253,12 +281,13 @@ function promptAdminPass(){
     if(pass === ADMIN_PASSWORD){
         adminPanel.classList.remove("hidden");
         renderBartenders();
+        renderAdminProducts();
     } else {
         alert("Contraseña incorrecta");
     }
 }
 
-// ADMIN
+// ADMIN BARTENDERS
 function createBartender(){
     const u=newUser.value.trim();
     const p=newPass.value.trim();
@@ -275,10 +304,12 @@ function createBartender(){
 function renderBartenders(){
     bartenderList.innerHTML="";
     users.forEach(user=>{
-        bartenderList.innerHTML+=`
-        ${user.username}
-        <button onclick="deleteBartender('${user.username}')">X</button>
-        <br>`;
+        if(user.role==="bartender"){
+            bartenderList.innerHTML+=`
+            ${user.username}
+            <button onclick="deleteBartender('${user.username}')">X</button>
+            <br>`;
+        }
     });
 }
 
@@ -286,6 +317,61 @@ function deleteBartender(username){
     users=users.filter(user=>user.username!==username);
     saveUsers();
     renderBartenders();
+}
+
+// ADMIN PRODUCTOS
+function addProduct(){
+    const name = productName.value.trim();
+    const price = parseFloat(productPrice.value);
+
+    if(!name || isNaN(price) || price<0){
+        alert("Nombre y precio válidos son requeridos");
+        return;
+    }
+
+    const existing = products.find(p=>p.name.toLowerCase()===name.toLowerCase());
+    if(existing){
+        existing.price = price;
+    } else {
+        products.push({name:name, price:price});
+    }
+
+    saveProducts();
+    productName.value="";
+    productPrice.value="";
+}
+
+function renderProductList(){
+    const container = document.getElementById("productList");
+    container.innerHTML="";
+    products.forEach((p,i)=>{
+        container.innerHTML+=`
+        ${p.name} - $${p.price}
+        <button onclick="deleteProduct(${i})">X</button><br>`;
+    });
+}
+
+function deleteProduct(index){
+    if(confirm("Eliminar producto "+products[index].name+"?")){
+        products.splice(index,1);
+        saveProducts();
+    }
+}
+
+function renderAdminProducts(){
+    renderProductList();
+}
+
+// 🔹 Google Sheets
+function sendToSheets(sale){
+    const url = "https://script.google.com/macros/s/AKfycbwh3QQynxHgLv2XINajNUUBKnZw-Xv5KFdDcCAO4qLR6OIjfjA-t8XPgmMEzZMwFp5N/exec"; // Pega aquí la URL de tu Web App
+    fetch(url, {
+        method:"POST",
+        body: JSON.stringify(sale)
+    })
+    .then(res=>res.json())
+    .then(data=>console.log("Venta enviada a Sheets", data))
+    .catch(err=>console.error("Error enviando a Sheets", err));
 }
 
 </script>
