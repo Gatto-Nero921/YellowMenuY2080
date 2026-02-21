@@ -105,13 +105,13 @@ button:hover{
 </div>
 
 <script>
-// Usuarios y seguridad
+// 🔹 Usuarios y seguridad
 let users = JSON.parse(localStorage.getItem("users")) || [];
 if(!Array.isArray(users)) users = [];
 let currentUser = null;
 const ADMIN_PASSWORD = "yellowpunk2077";
 
-// Productos
+// 🔹 Productos
 let products = JSON.parse(localStorage.getItem("products")) || [
     {name:"Cerveza", price:5},
     {name:"Ron", price:8},
@@ -119,12 +119,12 @@ let products = JSON.parse(localStorage.getItem("products")) || [
 ];
 localStorage.setItem("products", JSON.stringify(products));
 
-// Ventas
+// 🔹 Ventas
 let sales;
-try {
+try{
     sales = JSON.parse(localStorage.getItem("sales"));
     if(!Array.isArray(sales)) sales = [];
-} catch(err) { sales = []; }
+}catch(err){ sales = []; }
 
 // Primer bartender automático
 if(users.length===0){
@@ -134,14 +134,14 @@ if(users.length===0){
         users.push({username:u.trim(), password:p.trim(), role:"bartender"});
         localStorage.setItem("users", JSON.stringify(users));
         alert("Primer bartender creado: "+u);
-    } else { alert("Debes crear un bartender"); location.reload(); }
+    }else{ alert("Debes crear un bartender"); location.reload(); }
 }
 
-// Guardar
+// 🔹 Guardar
 function saveUsers(){ localStorage.setItem("users", JSON.stringify(users)); }
 function saveProducts(){ localStorage.setItem("products", JSON.stringify(products)); renderProducts(); renderProductList(); }
 
-// Login
+// 🔹 Login
 function login(){
     const u = username.value.trim();
     const p = password.value.trim();
@@ -152,12 +152,12 @@ function login(){
         posScreen.classList.remove("hidden");
         welcome.innerText = "Conectado: " + currentUser.username;
         renderProducts();
-    } else { alert("Usuario o contraseña incorrectos"); }
+    }else{ alert("Usuario o contraseña incorrectos"); }
 }
-
 function logout(){ location.reload(); }
 
-// Productos
+// 🔹 Productos
+let cart=[]; let total=0;
 function renderProducts(){
     const container = document.getElementById("products");
     container.innerHTML="";
@@ -170,7 +170,6 @@ function renderProducts(){
     });
 }
 function addToCart(p){ cart.push(p); total+=p.price; renderTicket(); }
-let cart=[]; let total=0;
 function renderTicket(){
     ticketItems.innerHTML="";
     cart.forEach(item=>{ ticketItems.innerHTML+=item.name+" - $"+item.price+"<br>"; });
@@ -178,7 +177,7 @@ function renderTicket(){
 }
 function resetCart(){ cart=[]; total=0; renderTicket(); }
 
-// Cobrar y enviar a Google Sheets
+// 🔹 Cobrar y enviar a Google Sheets
 function cobrar(){
     if(cart.length===0) return;
     const sale={
@@ -190,12 +189,12 @@ function cobrar(){
     };
     sales.push(sale);
     localStorage.setItem("sales", JSON.stringify(sales));
-    sendToSheets(sale); // ✅ Enviar a Sheets
+    sendToSheets(sale);
     resetCart();
     alert("Venta guardada");
 }
 
-// Historial
+// 🔹 Historial
 function toggleHistorial(){ historialPanel.classList.toggle("hidden"); renderHistorial(); }
 function renderHistorial(){
     historialContent.innerHTML="";
@@ -211,7 +210,7 @@ function renderHistorial(){
     });
 }
 
-// Admin
+// 🔹 Admin
 function promptAdminPass(){
     const pass = prompt("Ingresa la contraseña del panel admin:");
     if(pass === ADMIN_PASSWORD){
@@ -220,15 +219,14 @@ function promptAdminPass(){
     } else { alert("Contraseña incorrecta"); }
 }
 
-// Bartenders
+// 🔹 Bartenders
 function createBartender(){
     const u=newUser.value.trim();
     const p=newPass.value.trim();
     if(!u||!p) return alert("Completa los campos");
     if(users.find(user=>user.username===u)) return alert("Usuario ya existe");
     users.push({username:u,password:p,role:"bartender"});
-    saveUsers();
-    renderBartenders();
+    saveUsers(); renderBartenders();
     newUser.value=""; newPass.value="";
 }
 function renderBartenders(){
@@ -239,15 +237,14 @@ function renderBartenders(){
 }
 function deleteBartender(username){ users=users.filter(u=>u.username!==username); saveUsers(); renderBartenders(); }
 
-// Productos admin
+// 🔹 Productos Admin
 function addProduct(){
     const name = productName.value.trim();
     const price = parseFloat(productPrice.value);
     if(!name || isNaN(price) || price<0){ alert("Nombre y precio válidos"); return; }
     const existing = products.find(p=>p.name.toLowerCase()===name.toLowerCase());
     if(existing){ existing.price=price; } else { products.push({name:name,price:price}); }
-    saveProducts();
-    productName.value=""; productPrice.value="";
+    saveProducts(); productName.value=""; productPrice.value="";
 }
 function renderProductList(){
     productList.innerHTML="";
@@ -256,13 +253,13 @@ function renderProductList(){
 function deleteProduct(i){ if(confirm("Eliminar "+products[i].name+"?")){ products.splice(i,1); saveProducts(); } }
 function renderAdminProducts(){ renderProductList(); }
 
-// Google Sheets
+// 🔹 Google Sheets
 function sendToSheets(sale){
-    const url = "https://script.google.com/macros/s/AKfycbx9uF7xSBwHUBfcCk1H94LwT52TyD9spKQj6KjQ4f6nSMEEaKlv1LeAb_jMjhd5tIvp/exec"; // Pega aquí la URL de tu Web App
+    const url = "https://script.google.com/macros/s/AKfycbx603Jf0VTPKRLJRCovmatxx-6T3kazgZtAwg-LAdTPoCDPnJf28Pc8v45-jSrAT2n1/exec"; // Pega tu Web App URL
     fetch(url,{
         method:"POST",
-        body:JSON.stringify(sale),
-        mode:"no-cors" // ✅ evita CORS, envía datos aunque no lea respuesta
+        body: JSON.stringify(sale),
+        mode:"no-cors" // ✅ evita CORS
     })
     .then(()=>console.log("Venta enviada a Sheets"))
     .catch(err=>console.error("Error enviando a Sheets", err));
