@@ -3,7 +3,6 @@
 <head>
 <meta charset="UTF-8">
 <title>YellowPunk Terminal</title>
-
 <style>
 body{
     margin:0;
@@ -56,7 +55,6 @@ button:hover{
 }
 </style>
 </head>
-
 <body>
 
 <!-- LOGIN -->
@@ -69,12 +67,9 @@ button:hover{
 
 <!-- POS -->
 <div id="posScreen" class="hidden">
-
 <h2 id="welcome"></h2>
-
 <div class="main">
 <div id="products" class="products"></div>
-
 <div class="ticket">
 <h3>Ticket</h3>
 <div id="ticketItems"></div>
@@ -95,63 +90,43 @@ button:hover{
 
 <!-- ADMIN PANEL -->
 <div id="adminPanel" class="admin-panel hidden">
-
 <h3>Panel Admin</h3>
-
 <h4>Crear Bartender</h4>
 <input id="newUser" placeholder="Usuario">
 <input id="newPass" placeholder="Contraseña">
 <button onclick="createBartender()">Crear</button>
-
 <h4>Lista de Bartenders</h4>
 <div id="bartenderList"></div>
-
 <h4>Gestionar Productos</h4>
 <input id="productName" placeholder="Nombre del producto">
 <input id="productPrice" type="number" placeholder="Precio">
 <button onclick="addProduct()">Agregar / Actualizar</button>
 <div id="productList"></div>
-
 </div>
 
 <script>
-// 🔑 USUARIOS (bartenders)
+// Usuarios y seguridad
 let users = JSON.parse(localStorage.getItem("users")) || [];
 if(!Array.isArray(users)) users = [];
-
 let currentUser = null;
-
-// CONTRASEÑA GENERAL DEL PANEL ADMIN
 const ADMIN_PASSWORD = "yellowpunk2077";
 
-// PRODUCTOS
-let products = [
+// Productos
+let products = JSON.parse(localStorage.getItem("products")) || [
     {name:"Cerveza", price:5},
     {name:"Ron", price:8},
     {name:"Whisky", price:10}
 ];
+localStorage.setItem("products", JSON.stringify(products));
 
-// Cargar productos desde localStorage
-let storedProducts = JSON.parse(localStorage.getItem("products"));
-if(Array.isArray(storedProducts) && storedProducts.length>0){
-    products = storedProducts;
-} else {
-    localStorage.setItem("products", JSON.stringify(products));
-}
-
-let cart = [];
-let total = 0;
-
-// VENTAS
+// Ventas
 let sales;
 try {
-    sales = JSON.parse(localStorage.getItem("sales")) || [];
+    sales = JSON.parse(localStorage.getItem("sales"));
     if(!Array.isArray(sales)) sales = [];
-} catch {
-    sales = [];
-}
+} catch(err) { sales = []; }
 
-// 🔹 Primer bartender automático
+// Primer bartender automático
 if(users.length===0){
     const u = prompt("No hay bartenders. Crea el primer usuario:");
     const p = prompt("Contraseña del primer bartender:");
@@ -159,27 +134,17 @@ if(users.length===0){
         users.push({username:u.trim(), password:p.trim(), role:"bartender"});
         localStorage.setItem("users", JSON.stringify(users));
         alert("Primer bartender creado: "+u);
-    } else {
-        alert("Debes crear un bartender para continuar.");
-        location.reload();
-    }
+    } else { alert("Debes crear un bartender"); location.reload(); }
 }
 
-// FUNCIONES
-function saveUsers(){
-    localStorage.setItem("users", JSON.stringify(users));
-}
-function saveProducts(){
-    localStorage.setItem("products", JSON.stringify(products));
-    renderProducts();
-    renderProductList();
-}
+// Guardar
+function saveUsers(){ localStorage.setItem("users", JSON.stringify(users)); }
+function saveProducts(){ localStorage.setItem("products", JSON.stringify(products)); renderProducts(); renderProductList(); }
 
-// LOGIN
+// Login
 function login(){
     const u = username.value.trim();
     const p = password.value.trim();
-
     const found = users.find(user=>user.username===u && user.password===p);
     if(found){
         currentUser = found;
@@ -187,16 +152,12 @@ function login(){
         posScreen.classList.remove("hidden");
         welcome.innerText = "Conectado: " + currentUser.username;
         renderProducts();
-    } else {
-        alert("Usuario o contraseña incorrectos");
-    }
+    } else { alert("Usuario o contraseña incorrectos"); }
 }
 
-function logout(){
-    location.reload();
-}
+function logout(){ location.reload(); }
 
-// PRODUCTOS
+// Productos
 function renderProducts(){
     const container = document.getElementById("products");
     container.innerHTML="";
@@ -208,31 +169,18 @@ function renderProducts(){
         container.appendChild(div);
     });
 }
-
-function addToCart(p){
-    cart.push(p);
-    total+=p.price;
-    renderTicket();
-}
-
+function addToCart(p){ cart.push(p); total+=p.price; renderTicket(); }
+let cart=[]; let total=0;
 function renderTicket(){
     ticketItems.innerHTML="";
-    cart.forEach(item=>{
-        ticketItems.innerHTML+=item.name+" - $"+item.price+"<br>";
-    });
+    cart.forEach(item=>{ ticketItems.innerHTML+=item.name+" - $"+item.price+"<br>"; });
     document.getElementById("total").innerText=total;
 }
+function resetCart(){ cart=[]; total=0; renderTicket(); }
 
-function resetCart(){
-    cart=[];
-    total=0;
-    renderTicket();
-}
-
-// COBRAR
+// Cobrar y enviar a Google Sheets
 function cobrar(){
     if(cart.length===0) return;
-
     const sale={
         ticket:sales.length+1,
         date:new Date().toLocaleString(),
@@ -240,140 +188,85 @@ function cobrar(){
         items:[...cart],
         total:total
     };
-
     sales.push(sale);
     localStorage.setItem("sales", JSON.stringify(sales));
-
-    sendToSheets(sale); // ✅ Enviar a Google Sheets
-
+    sendToSheets(sale); // ✅ Enviar a Sheets
     resetCart();
     alert("Venta guardada");
 }
 
-// HISTORIAL
-function toggleHistorial(){
-    historialPanel.classList.toggle("hidden");
-    renderHistorial();
-}
-
+// Historial
+function toggleHistorial(){ historialPanel.classList.toggle("hidden"); renderHistorial(); }
 function renderHistorial(){
     historialContent.innerHTML="";
-    if(sales.length===0){
-        historialContent.innerText="Sin ventas";
-        return;
-    }
+    if(!Array.isArray(sales) || sales.length===0){ historialContent.innerText="Sin ventas"; return; }
     sales.slice().reverse().forEach(sale=>{
         let html="<div style='border:1px solid #f5d742;padding:10px;margin-bottom:10px'>";
         html+="<strong>Ticket #"+sale.ticket+"</strong><br>";
         html+=sale.date+"<br>";
         html+="Bartender: "+sale.bartender+"<br><br>";
-        sale.items.forEach(item=>{
-            html+=item.name+" $"+item.price+"<br>";
-        });
+        sale.items.forEach(item=>{ html+=item.name+" $"+item.price+"<br>"; });
         html+="<hr>Total: $"+sale.total+"</div>";
         historialContent.innerHTML+=html;
     });
 }
 
-// PANEL ADMIN POR CONTRASEÑA
+// Admin
 function promptAdminPass(){
     const pass = prompt("Ingresa la contraseña del panel admin:");
     if(pass === ADMIN_PASSWORD){
         adminPanel.classList.remove("hidden");
-        renderBartenders();
-        renderAdminProducts();
-    } else {
-        alert("Contraseña incorrecta");
-    }
+        renderBartenders(); renderAdminProducts();
+    } else { alert("Contraseña incorrecta"); }
 }
 
-// ADMIN BARTENDERS
+// Bartenders
 function createBartender(){
     const u=newUser.value.trim();
     const p=newPass.value.trim();
     if(!u||!p) return alert("Completa los campos");
     if(users.find(user=>user.username===u)) return alert("Usuario ya existe");
-
     users.push({username:u,password:p,role:"bartender"});
     saveUsers();
     renderBartenders();
-    newUser.value="";
-    newPass.value="";
+    newUser.value=""; newPass.value="";
 }
-
 function renderBartenders(){
     bartenderList.innerHTML="";
-    users.forEach(user=>{
-        if(user.role==="bartender"){
-            bartenderList.innerHTML+=`
-            ${user.username}
-            <button onclick="deleteBartender('${user.username}')">X</button>
-            <br>`;
-        }
-    });
+    users.forEach(user=>{ if(user.role==="bartender"){
+        bartenderList.innerHTML+=`${user.username} <button onclick="deleteBartender('${user.username}')">X</button><br>`;
+    }});
 }
+function deleteBartender(username){ users=users.filter(u=>u.username!==username); saveUsers(); renderBartenders(); }
 
-function deleteBartender(username){
-    users=users.filter(user=>user.username!==username);
-    saveUsers();
-    renderBartenders();
-}
-
-// ADMIN PRODUCTOS
+// Productos admin
 function addProduct(){
     const name = productName.value.trim();
     const price = parseFloat(productPrice.value);
-
-    if(!name || isNaN(price) || price<0){
-        alert("Nombre y precio válidos son requeridos");
-        return;
-    }
-
+    if(!name || isNaN(price) || price<0){ alert("Nombre y precio válidos"); return; }
     const existing = products.find(p=>p.name.toLowerCase()===name.toLowerCase());
-    if(existing){
-        existing.price = price;
-    } else {
-        products.push({name:name, price:price});
-    }
-
+    if(existing){ existing.price=price; } else { products.push({name:name,price:price}); }
     saveProducts();
-    productName.value="";
-    productPrice.value="";
+    productName.value=""; productPrice.value="";
 }
-
 function renderProductList(){
-    const container = document.getElementById("productList");
-    container.innerHTML="";
-    products.forEach((p,i)=>{
-        container.innerHTML+=`
-        ${p.name} - $${p.price}
-        <button onclick="deleteProduct(${i})">X</button><br>`;
-    });
+    productList.innerHTML="";
+    products.forEach((p,i)=>{ productList.innerHTML+=`${p.name} - $${p.price} <button onclick="deleteProduct(${i})">X</button><br>`; });
 }
+function deleteProduct(i){ if(confirm("Eliminar "+products[i].name+"?")){ products.splice(i,1); saveProducts(); } }
+function renderAdminProducts(){ renderProductList(); }
 
-function deleteProduct(index){
-    if(confirm("Eliminar producto "+products[index].name+"?")){
-        products.splice(index,1);
-        saveProducts();
-    }
-}
-
-function renderAdminProducts(){
-    renderProductList();
-}
-
-// 🔹 Google Sheets
+// Google Sheets
 function sendToSheets(sale){
-    const url = "https://script.google.com/macros/s/AKfycbwh3QQynxHgLv2XINajNUUBKnZw-Xv5KFdDcCAO4qLR6OIjfjA-t8XPgmMEzZMwFp5N/exec"; // Pega aquí la URL de tu Web App
-    fetch(url, {
+    const url = "https://script.google.com/macros/s/AKfycbx9uF7xSBwHUBfcCk1H94LwT52TyD9spKQj6KjQ4f6nSMEEaKlv1LeAb_jMjhd5tIvp/exec"; // Pega aquí la URL de tu Web App
+    fetch(url,{
         method:"POST",
-        body: JSON.stringify(sale)
+        body:JSON.stringify(sale),
+        mode:"no-cors" // ✅ evita CORS, envía datos aunque no lea respuesta
     })
-    .then(res=>res.json())
-    .then(data=>console.log("Venta enviada a Sheets", data))
+    .then(()=>console.log("Venta enviada a Sheets"))
     .catch(err=>console.error("Error enviando a Sheets", err));
 }
-
 </script>
 
 </body>
