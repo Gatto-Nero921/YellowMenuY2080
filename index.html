@@ -18,7 +18,7 @@ body{
 .products{
     padding:20px;
     display:grid;
-    grid-template-columns:repeat(auto-fill,minmax(120px,1fr));
+    grid-template-columns:repeat(auto-fill,minmax(150px,1fr));
     gap:10px;
 }
 .product{
@@ -27,10 +27,10 @@ body{
     padding:15px;
     text-align:center;
     cursor:pointer;
-    transition: 0.3s all;
+    transition: 0.3s;
 }
 .product:hover{
-    box-shadow: 0 0 10px #f5d742;
+    box-shadow:0 0 10px #f5d742;
 }
 .ticket{
     border-left:2px solid #f5d742;
@@ -43,10 +43,9 @@ button{
     background:#f5d742;
     font-weight:bold;
     cursor:pointer;
-    transition: 0.3s all;
 }
 button:hover{
-    box-shadow: 0 0 10px #f5d742;
+    box-shadow:0 0 10px #f5d742;
 }
 .admin-panel{
     padding:20px;
@@ -57,7 +56,6 @@ button:hover{
 </head>
 <body>
 
-<!-- LOGIN -->
 <div id="loginScreen">
 <h2>Login Bartender</h2>
 <input id="username" placeholder="Usuario"><br>
@@ -65,11 +63,11 @@ button:hover{
 <button onclick="login()">Entrar</button>
 </div>
 
-<!-- POS -->
 <div id="posScreen" class="hidden">
 <h2 id="welcome"></h2>
 <div class="main">
 <div id="products" class="products"></div>
+
 <div class="ticket">
 <h3>Ticket</h3>
 <div id="ticketItems"></div>
@@ -82,39 +80,54 @@ button:hover{
 </div>
 </div>
 
-<!-- HISTORIAL -->
 <div id="historialPanel" class="hidden" style="padding:20px;border-top:2px solid #f5d742;">
 <h3>Historial</h3>
 <div id="historialContent"></div>
 </div>
 
-<!-- ADMIN PANEL -->
 <div id="adminPanel" class="admin-panel hidden">
 <h3>Panel Admin</h3>
+
 <h4>Crear Bartender</h4>
 <input id="newUser" placeholder="Usuario">
 <input id="newPass" placeholder="Contraseña">
 <button onclick="createBartender()">Crear</button>
+
 <h4>Lista de Bartenders</h4>
 <div id="bartenderList"></div>
+
 <h4>Gestionar Productos</h4>
-<input id="productName" placeholder="Nombre del producto">
+<input id="productName" placeholder="Nombre">
 <input id="productPrice" type="number" placeholder="Precio">
 <button onclick="addProduct()">Agregar / Actualizar</button>
 <div id="productList"></div>
 </div>
 
 <script>
-// 🔹 Usuarios y seguridad
-let users = JSON.parse(localStorage.getItem("users")) || [];
+
+// ---------- USUARIOS ----------
+let users = JSON.parse(localStorage.getItem("users"));
 if(!Array.isArray(users)) users = [];
 let currentUser = null;
 const ADMIN_PASSWORD = "yellowpunk2077";
 
-// 🔹 Productos
+if(users.length === 0){
+    const u = prompt("Crea el primer bartender:");
+    const p = prompt("Contraseña:");
+    if(u && p){
+        users.push({username:u.trim(), password:p.trim(), role:"bartender"});
+        localStorage.setItem("users", JSON.stringify(users));
+        alert("Bartender creado");
+    } else {
+        alert("Debes crear un usuario");
+        location.reload();
+    }
+}
+
+// ---------- PRODUCTOS ----------
 let defaultProducts = [
-    {name:"Cerveza", price:10},
-    {name:"Ron", price:10},
+    {name:"Cerveza", price:8},
+    {name:"Ron", price:8},
     {name:"Whisky", price:10},
     {name:"Ara-suck-a", price:36},
     {name:"Rompe relic", price:30},
@@ -129,43 +142,29 @@ let defaultProducts = [
     {name:"Pollo YFC", price:24}
 ];
 
-let products = JSON.parse(localStorage.getItem("products")) || [];
+let products = JSON.parse(localStorage.getItem("products"));
+if(!Array.isArray(products)) products = [];
 
-// Añadir productos que no existan
-defaultProducts.forEach(p => {
-    if(!products.find(prod => prod.name === p.name)){
+defaultProducts.forEach(p=>{
+    if(!products.find(prod=>prod.name===p.name)){
         products.push(p);
     }
 });
 
-// Actualizar precio cerveza si ya existe
-let cerveza = products.find(p => p.name === "Cerveza");
+// Actualiza precio cerveza si ya existe
+let cerveza = products.find(p=>p.name==="Cerveza");
 if(cerveza) cerveza.price = 8;
 
-localStorage.setItem("products", JSON.stringify(products));n
-// 🔹 Ventas
-let sales;
-try{
-    sales = JSON.parse(localStorage.getItem("sales"));
-    if(!Array.isArray(sales)) sales = [];
-}catch(err){ sales = []; }
+localStorage.setItem("products", JSON.stringify(products));
 
-// Primer bartender automático
-if(users.length===0){
-    const u = prompt("No hay bartenders. Crea el primer usuario:");
-    const p = prompt("Contraseña del primer bartender:");
-    if(u && p){
-        users.push({username:u.trim(), password:p.trim(), role:"bartender"});
-        localStorage.setItem("users", JSON.stringify(users));
-        alert("Primer bartender creado: "+u);
-    }else{ alert("Debes crear un bartender"); location.reload(); }
-}
+// ---------- VENTAS ----------
+let sales = JSON.parse(localStorage.getItem("sales"));
+if(!Array.isArray(sales)) sales = [];
 
-// 🔹 Guardar
-function saveUsers(){ localStorage.setItem("users", JSON.stringify(users)); }
-function saveProducts(){ localStorage.setItem("products", JSON.stringify(products)); renderProducts(); renderProductList(); }
+let ticketCounter = parseInt(localStorage.getItem("ticketCounter"));
+if(isNaN(ticketCounter)) ticketCounter = 1;
 
-// 🔹 Login
+// ---------- FUNCIONES ----------
 function login(){
     const u = username.value.trim();
     const p = password.value.trim();
@@ -176,119 +175,115 @@ function login(){
         posScreen.classList.remove("hidden");
         welcome.innerText = "Conectado: " + currentUser.username;
         renderProducts();
-    }else{ alert("Usuario o contraseña incorrectos"); }
+    } else alert("Credenciales incorrectas");
 }
+
 function logout(){ location.reload(); }
 
-// 🔹 Productos
+// Productos
 let cart=[]; let total=0;
+
 function renderProducts(){
-    const container = document.getElementById("products");
-    container.innerHTML="";
+    products.sort((a,b)=>a.name.localeCompare(b.name));
     products.forEach(p=>{
         const div=document.createElement("div");
         div.className="product";
         div.innerText=p.name+" $"+p.price;
         div.onclick=()=>addToCart(p);
-        container.appendChild(div);
+        productsContainer.appendChild(div);
     });
 }
-function addToCart(p){ cart.push(p); total+=p.price; renderTicket(); }
+
+const productsContainer = document.getElementById("products");
+
+function addToCart(p){
+    cart.push(p);
+    total+=p.price;
+    renderTicket();
+}
+
 function renderTicket(){
     ticketItems.innerHTML="";
-    cart.forEach(item=>{ ticketItems.innerHTML+=item.name+" - $"+item.price+"<br>"; });
-    document.getElementById("total").innerText=total;
+    cart.forEach(item=>{
+        ticketItems.innerHTML+=item.name+" - $"+item.price+"<br>";
+    });
+    totalDisplay.innerText=total;
 }
-function resetCart(){ cart=[]; total=0; renderTicket(); }
 
-// 🔹 Cobrar y enviar a Google Sheets
+const ticketItems=document.getElementById("ticketItems");
+const totalDisplay=document.getElementById("total");
+
+function resetCart(){
+    cart=[]; total=0; renderTicket();
+}
+
 function cobrar(){
     if(cart.length===0) return;
+
     const sale={
-        ticket:sales.length+1,
+        ticket:ticketCounter,
         date:new Date().toLocaleString(),
         bartender:currentUser.username,
         items:[...cart],
         total:total
     };
+
     sales.push(sale);
     localStorage.setItem("sales", JSON.stringify(sales));
+
     sendToSheets(sale);
+
+    ticketCounter++;
+    localStorage.setItem("ticketCounter", ticketCounter);
+
     resetCart();
     alert("Venta guardada");
 }
 
-// 🔹 Historial
-function toggleHistorial(){ historialPanel.classList.toggle("hidden"); renderHistorial(); }
+function toggleHistorial(){
+    historialPanel.classList.toggle("hidden");
+    renderHistorial();
+}
+
 function renderHistorial(){
     historialContent.innerHTML="";
-    if(!Array.isArray(sales) || sales.length===0){ historialContent.innerText="Sin ventas"; return; }
+    if(!Array.isArray(sales)||sales.length===0){
+        historialContent.innerText="Sin ventas";
+        return;
+    }
+
     sales.slice().reverse().forEach(sale=>{
         let html="<div style='border:1px solid #f5d742;padding:10px;margin-bottom:10px'>";
         html+="<strong>Ticket #"+sale.ticket+"</strong><br>";
         html+=sale.date+"<br>";
         html+="Bartender: "+sale.bartender+"<br><br>";
-        sale.items.forEach(item=>{ html+=item.name+" $"+item.price+"<br>"; });
+        sale.items.forEach(item=>{
+            html+=item.name+" $"+item.price+"<br>";
+        });
         html+="<hr>Total: $"+sale.total+"</div>";
         historialContent.innerHTML+=html;
     });
 }
 
-// 🔹 Admin
 function promptAdminPass(){
-    const pass = prompt("Ingresa la contraseña del panel admin:");
-    if(pass === ADMIN_PASSWORD){
+    const pass = prompt("Contraseña admin:");
+    if(pass===ADMIN_PASSWORD){
         adminPanel.classList.remove("hidden");
-        renderBartenders(); renderAdminProducts();
-    } else { alert("Contraseña incorrecta"); }
+        renderBartenders();
+        renderProductList();
+    } else alert("Incorrecto");
 }
 
-// 🔹 Bartenders
-function createBartender(){
-    const u=newUser.value.trim();
-    const p=newPass.value.trim();
-    if(!u||!p) return alert("Completa los campos");
-    if(users.find(user=>user.username===u)) return alert("Usuario ya existe");
-    users.push({username:u,password:p,role:"bartender"});
-    saveUsers(); renderBartenders();
-    newUser.value=""; newPass.value="";
-}
-function renderBartenders(){
-    bartenderList.innerHTML="";
-    users.forEach(user=>{ if(user.role==="bartender"){
-        bartenderList.innerHTML+=`${user.username} <button onclick="deleteBartender('${user.username}')">X</button><br>`;
-    }});
-}
-function deleteBartender(username){ users=users.filter(u=>u.username!==username); saveUsers(); renderBartenders(); }
-
-// 🔹 Productos Admin
-function addProduct(){
-    const name = productName.value.trim();
-    const price = parseFloat(productPrice.value);
-    if(!name || isNaN(price) || price<0){ alert("Nombre y precio válidos"); return; }
-    const existing = products.find(p=>p.name.toLowerCase()===name.toLowerCase());
-    if(existing){ existing.price=price; } else { products.push({name:name,price:price}); }
-    saveProducts(); productName.value=""; productPrice.value="";
-}
-function renderProductList(){
-    productList.innerHTML="";
-    products.forEach((p,i)=>{ productList.innerHTML+=`${p.name} - $${p.price} <button onclick="deleteProduct(${i})">X</button><br>`; });
-}
-function deleteProduct(i){ if(confirm("Eliminar "+products[i].name+"?")){ products.splice(i,1); saveProducts(); } }
-function renderAdminProducts(){ renderProductList(); }
-
-// 🔹 Google Sheets
+// Google Sheets
 function sendToSheets(sale){
-    const url = "https://script.google.com/macros/s/AKfycbx603Jf0VTPKRLJRCovmatxx-6T3kazgZtAwg-LAdTPoCDPnJf28Pc8v45-jSrAT2n1/exec"; // Pega tu Web App URL
+    const url="https://script.google.com/macros/s/AKfycbx603Jf0VTPKRLJRCovmatxx-6T3kazgZtAwg-LAdTPoCDPnJf28Pc8v45-jSrAT2n1/exec";
     fetch(url,{
         method:"POST",
-        body: JSON.stringify(sale),
-        mode:"no-cors" // ✅ evita CORS
-    })
-    .then(()=>console.log("Venta enviada a Sheets"))
-    .catch(err=>console.error("Error enviando a Sheets", err));
+        body:JSON.stringify(sale),
+        mode:"no-cors"
+    }).then(()=>console.log("Venta enviada a Sheets"));
 }
-</script>
 
+</script>
 </body>
 </html>
