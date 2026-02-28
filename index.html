@@ -112,13 +112,38 @@ let currentUser = null;
 const ADMIN_PASSWORD = "yellowpunk2077";
 
 // 🔹 Productos
-let products = JSON.parse(localStorage.getItem("products")) || [
-    {name:"Cerveza", price:5},
-    {name:"Ron", price:8},
-    {name:"Whisky", price:10}
+let defaultProducts = [
+    {name:"Cerveza", price:10},
+    {name:"Ron", price:10},
+    {name:"Whisky", price:10},
+    {name:"Ara-suck-a", price:36},
+    {name:"Rompe relic", price:30},
+    {name:"Ciber espacio", price:24},
+    {name:"Hermandad Nómada", price:36},
+    {name:"Abre heridas", price:36},
+    {name:"Trueno Negro", price:24},
+    {name:"Hamburguesa Yellow", price:24},
+    {name:"Hamburguesa vegetariana", price:24},
+    {name:"Pizza suprema", price:18},
+    {name:"Papas Yellow", price:24},
+    {name:"Pollo YFC", price:24}
 ];
-localStorage.setItem("products", JSON.stringify(products));
 
+let products = JSON.parse(localStorage.getItem("products")) || [];
+
+// Añadir productos que no existan
+defaultProducts.forEach(p => {
+    if(!products.find(prod => prod.name === p.name)){
+        products.push(p);
+    }
+});
+
+// Actualizar precio cerveza si ya existe
+let cerveza = products.find(p => p.name === "Cerveza");
+if(cerveza) cerveza.price = 8;
+
+localStorage.setItem("products", JSON.stringify(products));
+nnn
 // 🔹 Ventas
 let sales;
 try{
